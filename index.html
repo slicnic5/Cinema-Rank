@@ -1,0 +1,2993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CinemaRank — Build Your Movie List</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-hover: #1a1a25;
+            --accent-gold: #d4af37;
+            --accent-gold-dim: #b8962f;
+            --text-primary: #f5f5f5;
+            --text-secondary: #8a8a9a;
+            --text-muted: #5a5a6a;
+            --border-subtle: #2a2a35;
+            --shadow-glow: 0 0 40px rgba(212, 175, 55, 0.15);
+            --transition-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans 3', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Noise texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        .logo {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(48px, 8vw, 72px);
+            letter-spacing: 8px;
+            color: var(--accent-gold);
+            text-shadow: 0 0 60px rgba(212, 175, 55, 0.3);
+            margin-bottom: 12px;
+        }
+
+        .tagline {
+            font-size: 14px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            margin-top: 40px;
+            padding: 20px 40px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            border: 1px solid var(--border-subtle);
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 32px;
+            color: var(--accent-gold);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* Main content layout */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Battle arena */
+        .battle-section {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 40px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        /* Add Movie Search */
+        .add-movie-section {
+            margin-bottom: 28px;
+        }
+
+        .search-container {
+            display: flex;
+            gap: 12px;
+        }
+
+        .movie-search-input {
+            flex: 1;
+            padding: 14px 18px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        .movie-search-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+
+        .movie-search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-btn {
+            padding: 14px 24px;
+            background: var(--accent-gold);
+            border: none;
+            border-radius: 6px;
+            color: var(--bg-deep);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .search-btn:hover {
+            background: var(--accent-gold-dim);
+        }
+
+        .search-results {
+            margin-top: 12px;
+            max-height: 240px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .search-results.active {
+            display: block;
+        }
+
+        .search-result-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-deep);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .search-result-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .search-result-poster {
+            width: 40px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: var(--bg-hover);
+        }
+
+        .search-result-info {
+            flex: 1;
+        }
+
+        .search-result-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .search-result-year {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .search-result-add {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--accent-gold);
+            border-radius: 4px;
+            color: var(--accent-gold);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .search-result-add:hover {
+            background: var(--accent-gold);
+            color: var(--bg-deep);
+        }
+
+        .search-result-added {
+            padding: 8px 16px;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+
+        .no-results {
+            padding: 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        /* Taste Profile */
+        .taste-profile {
+            margin-bottom: 28px;
+            padding: 16px 20px;
+            background: var(--bg-deep);
+            border-radius: 6px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .taste-label {
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .taste-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .taste-tag {
+            padding: 6px 12px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .taste-tag.positive {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .taste-tag.strong {
+            background: var(--accent-gold);
+            color: var(--bg-deep);
+            border-color: var(--accent-gold);
+        }
+
+        .taste-tag.empty {
+            font-style: italic;
+            color: var(--text-muted);
+            border: none;
+            background: transparent;
+            padding-left: 0;
+        }
+
+        .matchup-mode {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 12px 16px;
+            background: rgba(212, 175, 55, 0.08);
+            border-radius: 6px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .matchup-mode-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .matchup-mode-toggle {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mode-btn {
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .mode-btn.active {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-deep);
+        }
+
+        .mode-btn:hover:not(.active) {
+            border-color: var(--text-muted);
+            color: var(--text-secondary);
+        }
+
+        .section-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 24px;
+            letter-spacing: 3px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 24px;
+            background: var(--accent-gold);
+        }
+
+        .battle-arena {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .movie-card-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .movie-card {
+            background: var(--bg-deep);
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.4s var(--transition-smooth);
+            border: 2px solid transparent;
+            position: relative;
+            width: 250px;
+        }
+
+        .havent-seen-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            border-radius: 4px;
+            color: var(--text-muted);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 100%;
+            max-width: 250px;
+        }
+
+        .havent-seen-btn:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-secondary);
+        }
+
+        .havent-seen-either-btn {
+            display: block;
+            width: 100%;
+            max-width: 400px;
+            margin: 24px auto 0;
+            padding: 14px 20px;
+            background: transparent;
+            border: 1px dashed var(--border-subtle);
+            border-radius: 6px;
+            color: var(--text-muted);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .havent-seen-either-btn:hover {
+            border-color: var(--text-secondary);
+            color: var(--text-secondary);
+            border-style: solid;
+        }
+
+        .movie-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: var(--accent-gold);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .movie-card.selected {
+            border-color: var(--accent-gold);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .movie-poster {
+            width: 100%;
+            aspect-ratio: 2/3;
+            object-fit: cover;
+            display: block;
+            background: var(--bg-hover);
+        }
+
+        .movie-poster-placeholder {
+            width: 100%;
+            aspect-ratio: 2/3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--bg-hover) 0%, var(--bg-deep) 100%);
+            color: var(--text-muted);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 48px;
+            letter-spacing: 2px;
+        }
+
+        .movie-info {
+            padding: 20px;
+        }
+
+        .movie-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 22px;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            line-height: 1.2;
+        }
+
+        .movie-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .movie-year {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+
+        .movie-rating {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .movie-rating::before {
+            content: '★';
+            color: var(--accent-gold);
+        }
+
+        .vs-badge {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 48px;
+            color: var(--text-muted);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+            flex-shrink: 0;
+        }
+
+        /* AI suggestion */
+        .ai-suggestion {
+            margin-top: 32px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.08) 0%, transparent 50%);
+            border-radius: 8px;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .ai-label {
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--accent-gold);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .ai-label::before {
+            content: '◆';
+            font-size: 8px;
+        }
+
+        .ai-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Rankings sidebar */
+        .rankings-section {
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 32px;
+            border: 1px solid var(--border-subtle);
+            height: 800px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .rankings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .rankings-count {
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .ranking-list-container {
+            flex: 1;
+            overflow-y: auto;
+            margin: 0 -16px;
+            padding: 0 16px;
+        }
+
+        /* Custom scrollbar */
+        .ranking-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .ranking-list-container::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+            border-radius: 3px;
+        }
+
+        .ranking-list-container::-webkit-scrollbar-thumb {
+            background: var(--border-subtle);
+            border-radius: 3px;
+        }
+
+        .ranking-list-container::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
+        }
+
+        .ranking-list {
+            list-style: none;
+        }
+
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 8px;
+            border-bottom: 1px solid var(--border-subtle);
+            transition: all 0.3s var(--transition-smooth);
+            border-radius: 4px;
+        }
+
+        .ranking-item:last-child {
+            border-bottom: none;
+        }
+
+        .ranking-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .rank-number {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 24px;
+            color: var(--text-muted);
+            width: 32px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .rank-number.top-3 {
+            color: var(--accent-gold);
+        }
+
+        .rank-number.top-10 {
+            color: var(--text-secondary);
+        }
+
+        .rank-poster {
+            width: 40px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 3px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            background: var(--bg-hover);
+        }
+
+        .rank-poster-placeholder {
+            width: 40px;
+            height: 60px;
+            border-radius: 3px;
+            flex-shrink: 0;
+            background: var(--bg-hover);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .rank-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .rank-title {
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+        }
+
+        .rank-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-top: 2px;
+        }
+
+        .rank-year {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .rank-score {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .elo-badge {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 16px;
+            color: var(--accent-gold);
+            flex-shrink: 0;
+        }
+
+        .empty-ranking {
+            color: var(--text-muted);
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Skip button */
+        .skip-btn {
+            display: block;
+            width: 100%;
+            margin-top: 24px;
+            padding: 16px;
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            font-size: 13px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s var(--transition-smooth);
+        }
+
+        .skip-btn:hover {
+            border-color: var(--text-muted);
+            color: var(--text-primary);
+        }
+
+        /* Database info panel */
+        .database-info {
+            margin-top: 40px;
+            padding: 32px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .db-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .db-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .db-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+        }
+
+        .db-stat-card {
+            padding: 20px;
+            background: var(--bg-deep);
+            border-radius: 6px;
+        }
+
+        .db-stat-label {
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        .db-stat-value {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 36px;
+            color: var(--text-primary);
+        }
+
+        .db-stat-detail {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 40px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .footer-text {
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+        }
+
+        .tmdb-credit {
+            margin-top: 12px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .tmdb-credit a {
+            color: var(--accent-gold);
+            text-decoration: none;
+        }
+
+        /* Loading animation */
+        .loading-skeleton {
+            background: linear-gradient(90deg, var(--bg-deep) 25%, var(--bg-hover) 50%, var(--bg-deep) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Share Section */
+        .share-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .share-label {
+            font-size: 11px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .share-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .share-btn {
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            text-align: center;
+        }
+
+        .share-copy {
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .share-copy:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .share-twitter {
+            background: #000;
+            color: #fff;
+        }
+
+        .share-twitter:hover {
+            background: #222;
+        }
+
+        .share-link {
+            background: var(--accent-gold);
+            color: var(--bg-deep);
+        }
+
+        .share-link:hover {
+            background: var(--accent-gold-dim);
+        }
+
+        .share-feedback {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--accent-gold);
+            text-align: center;
+            min-height: 18px;
+        }
+
+        /* Preferences Screen */
+        .preferences-screen {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .preferences-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 40px;
+            border: 1px solid var(--border-subtle);
+        }
+
+        .preferences-title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 36px;
+            letter-spacing: 2px;
+            color: var(--accent-gold);
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .preferences-subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 36px;
+        }
+
+        .preference-section {
+            margin-bottom: 32px;
+        }
+
+        .preference-label {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 20px;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .preference-hint {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .preference-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .pref-btn {
+            padding: 10px 18px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pref-btn:hover {
+            border-color: var(--text-muted);
+            color: var(--text-primary);
+        }
+
+        .pref-btn.selected {
+            background: var(--accent-gold);
+            border-color: var(--accent-gold);
+            color: var(--bg-deep);
+            font-weight: 600;
+        }
+
+        .start-btn {
+            display: block;
+            width: 100%;
+            padding: 18px 24px;
+            margin-top: 36px;
+            background: var(--accent-gold);
+            border: none;
+            border-radius: 8px;
+            color: var(--bg-deep);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 20px;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .start-btn:hover {
+            background: var(--accent-gold-dim);
+        }
+
+        .skip-prefs-btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            margin-top: 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 13px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .skip-prefs-btn:hover {
+            color: var(--text-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 580px) {
+            .battle-arena {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .movie-card-wrapper {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .movie-card {
+                width: 100%;
+            }
+
+            .vs-badge {
+                font-size: 32px;
+                padding: 8px 0;
+            }
+
+            .stats-bar {
+                flex-direction: column;
+                gap: 16px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1 class="logo">CINEMA RANK</h1>
+            <p class="tagline">Build your definitive movie list through head-to-head battles</p>
+            
+            <div class="stats-bar">
+                <div class="stat">
+                    <div class="stat-value" id="comparisons-count">0</div>
+                    <div class="stat-label">Comparisons Made</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="movies-ranked">0</div>
+                    <div class="stat-label">Movies Ranked</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="confidence-score">—</div>
+                    <div class="stat-label">Confidence Score</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Preferences Selection Screen -->
+        <div class="preferences-screen" id="preferences-screen">
+            <div class="preferences-card">
+                <h2 class="preferences-title">Set Your Preferences</h2>
+                <p class="preferences-subtitle">Help us show you movies you'll actually want to rank</p>
+                
+                <div class="preference-section">
+                    <h3 class="preference-label">Favorite Genres</h3>
+                    <p class="preference-hint">Select all that you enjoy</p>
+                    <div class="preference-options" id="genre-options">
+                        <button class="pref-btn" data-genre="Action" onclick="toggleGenrePref(this)">Action</button>
+                        <button class="pref-btn" data-genre="Adventure" onclick="toggleGenrePref(this)">Adventure</button>
+                        <button class="pref-btn" data-genre="Animation" onclick="toggleGenrePref(this)">Animation</button>
+                        <button class="pref-btn" data-genre="Comedy" onclick="toggleGenrePref(this)">Comedy</button>
+                        <button class="pref-btn" data-genre="Crime" onclick="toggleGenrePref(this)">Crime</button>
+                        <button class="pref-btn" data-genre="Documentary" onclick="toggleGenrePref(this)">Documentary</button>
+                        <button class="pref-btn" data-genre="Drama" onclick="toggleGenrePref(this)">Drama</button>
+                        <button class="pref-btn" data-genre="Family" onclick="toggleGenrePref(this)">Family</button>
+                        <button class="pref-btn" data-genre="Fantasy" onclick="toggleGenrePref(this)">Fantasy</button>
+                        <button class="pref-btn" data-genre="History" onclick="toggleGenrePref(this)">History</button>
+                        <button class="pref-btn" data-genre="Horror" onclick="toggleGenrePref(this)">Horror</button>
+                        <button class="pref-btn" data-genre="Music" onclick="toggleGenrePref(this)">Music</button>
+                        <button class="pref-btn" data-genre="Mystery" onclick="toggleGenrePref(this)">Mystery</button>
+                        <button class="pref-btn" data-genre="Romance" onclick="toggleGenrePref(this)">Romance</button>
+                        <button class="pref-btn" data-genre="Sci-Fi" onclick="toggleGenrePref(this)">Sci-Fi</button>
+                        <button class="pref-btn" data-genre="Thriller" onclick="toggleGenrePref(this)">Thriller</button>
+                        <button class="pref-btn" data-genre="War" onclick="toggleGenrePref(this)">War</button>
+                        <button class="pref-btn" data-genre="Western" onclick="toggleGenrePref(this)">Western</button>
+                    </div>
+                </div>
+
+                <div class="preference-section">
+                    <h3 class="preference-label">Preferred Eras</h3>
+                    <p class="preference-hint">Select the time periods you like most</p>
+                    <div class="preference-options" id="era-options">
+                        <button class="pref-btn" data-era="classic" onclick="toggleEraPref(this)">Classics (Pre-1980)</button>
+                        <button class="pref-btn" data-era="golden" onclick="toggleEraPref(this)">80s & 90s</button>
+                        <button class="pref-btn" data-era="modern" onclick="toggleEraPref(this)">2000s</button>
+                        <button class="pref-btn" data-era="recent" onclick="toggleEraPref(this)">2010s</button>
+                        <button class="pref-btn" data-era="new" onclick="toggleEraPref(this)">2020s</button>
+                    </div>
+                </div>
+
+                <button class="start-btn" onclick="startRanking()">Start Ranking Movies</button>
+                <button class="skip-prefs-btn" onclick="skipPreferences()">Skip — Show me everything</button>
+            </div>
+        </div>
+
+        <main class="main-content" id="main-content" style="display: none;">
+            <div class="battle-section">
+                <h2 class="section-title">Choose Your Favorite</h2>
+                
+                <!-- Add Movie Search -->
+                <div class="add-movie-section">
+                    <div class="search-container">
+                        <input type="text" id="movie-search" class="movie-search-input" placeholder="Search to add a movie to your rotation...">
+                        <button class="search-btn" onclick="searchMovies()">Search</button>
+                    </div>
+                    <div class="search-results" id="search-results"></div>
+                </div>
+
+                <!-- Taste Profile -->
+                <div class="taste-profile" id="taste-profile">
+                    <div class="taste-label">Your Taste Profile</div>
+                    <div class="taste-tags" id="taste-tags">
+                        <span class="taste-tag empty">Make some choices to discover your taste...</span>
+                    </div>
+                </div>
+                
+                <div class="battle-arena">
+                    <div class="movie-card-wrapper">
+                        <div class="movie-card" id="movie-left" onclick="selectMovie('left')">
+                            <img class="movie-poster" id="poster-left" src="" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="movie-poster-placeholder" id="placeholder-left" style="display:none;">🎬</div>
+                            <div class="movie-info">
+                                <h3 class="movie-title" id="title-left">Loading...</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-year" id="year-left"></span>
+                                    <span class="movie-rating" id="rating-left"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="havent-seen-btn" onclick="haventSeen('left')">Haven't seen this</button>
+                    </div>
+
+                    <div class="vs-badge">VS</div>
+
+                    <div class="movie-card-wrapper">
+                        <div class="movie-card" id="movie-right" onclick="selectMovie('right')">
+                            <img class="movie-poster" id="poster-right" src="" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="movie-poster-placeholder" id="placeholder-right" style="display:none;">🎬</div>
+                            <div class="movie-info">
+                                <h3 class="movie-title" id="title-right">Loading...</h3>
+                                <div class="movie-meta">
+                                    <span class="movie-year" id="year-right"></span>
+                                    <span class="movie-rating" id="rating-right"></span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="havent-seen-btn" onclick="haventSeen('right')">Haven't seen this</button>
+                    </div>
+                </div>
+
+                <!-- Haven't seen either button -->
+                <button class="havent-seen-either-btn" onclick="haventSeenEither()">Haven't seen either movie</button>
+
+                <div class="ai-suggestion" id="ai-suggestion">
+                    <div class="ai-label">AI Matchup Insight</div>
+                    <p class="ai-text" id="ai-text">Loading suggestion...</p>
+                </div>
+
+                <button class="skip-btn" onclick="skipMatchup()">Skip This Matchup</button>
+            </div>
+
+            <aside class="rankings-section">
+                <div class="rankings-header">
+                    <h2 class="section-title">Your Top 100</h2>
+                    <span class="rankings-count" id="rankings-count">0 ranked</span>
+                </div>
+                
+                <div class="ranking-list-container">
+                    <ul class="ranking-list" id="ranking-list">
+                        <li class="empty-ranking">
+                            Click on movies to pick your favorites.<br>
+                            Your personalized Top 100 will appear here.
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Share Buttons -->
+                <div class="share-section" id="share-section" style="display: none;">
+                    <div class="share-label">Share Your Rankings</div>
+                    <div class="share-buttons">
+                        <button class="share-btn share-copy" onclick="copyShareText()">📋 Copy Top 10</button>
+                        <button class="share-btn share-twitter" onclick="shareToTwitter()">𝕏 Post</button>
+                        <button class="share-btn share-link" onclick="copyLink()">🔗 Copy Link</button>
+                    </div>
+                    <div class="share-feedback" id="share-feedback"></div>
+                </div>
+            </aside>
+        </main>
+
+        <section class="database-info">
+            <div class="db-header">
+                <h2 class="section-title">Movie Database</h2>
+                <div class="db-status">
+                    <span class="status-dot"></span>
+                    <span>Connected to TMDB</span>
+                </div>
+            </div>
+            
+            <div class="db-grid">
+                <div class="db-stat-card">
+                    <div class="db-stat-label">Total Movies</div>
+                    <div class="db-stat-value" id="total-movies">2,847</div>
+                    <div class="db-stat-detail">English language films</div>
+                </div>
+                <div class="db-stat-card">
+                    <div class="db-stat-label">Latest Addition</div>
+                    <div class="db-stat-value" id="latest-movie">Jan 5</div>
+                    <div class="db-stat-detail">Updated daily</div>
+                </div>
+                <div class="db-stat-card">
+                    <div class="db-stat-label">Genres Covered</div>
+                    <div class="db-stat-value">19</div>
+                    <div class="db-stat-detail">Action to Western</div>
+                </div>
+                <div class="db-stat-card">
+                    <div class="db-stat-label">Year Range</div>
+                    <div class="db-stat-value">1920–2026</div>
+                    <div class="db-stat-detail">100+ years of cinema</div>
+                </div>
+            </div>
+        </section>
+
+        <footer>
+            <p class="footer-text">Cinema Rank — Prototype v1.0</p>
+            <p class="tmdb-credit">
+                This product uses the <a href="https://www.themoviedb.org/" target="_blank">TMDB API</a> but is not endorsed or certified by TMDB.
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // ============================================
+        // SAMPLE MOVIE DATABASE
+        // In production, this would come from TMDB API
+        // ============================================
+        const movieDatabase = [
+            {
+                id: 27205,
+                title: "Inception",
+                year: 2010,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/oYuLEt3zVCKq57qu2F8dT7NIa6f.jpg",
+                genres: ["Action", "Sci-Fi", "Thriller"],
+                elo: 1500
+            },
+            {
+                id: 155,
+                title: "The Dark Knight",
+                year: 2008,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+                genres: ["Action", "Crime", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 238,
+                title: "The Godfather",
+                year: 1972,
+                rating: 8.7,
+                poster: "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
+                genres: ["Drama", "Crime"],
+                elo: 1500
+            },
+            {
+                id: 680,
+                title: "Pulp Fiction",
+                year: 1994,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/d5iIlFn5s0ImszYzBPb8JPIfbXD.jpg",
+                genres: ["Thriller", "Crime"],
+                elo: 1500
+            },
+            {
+                id: 13,
+                title: "Forrest Gump",
+                year: 1994,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/arw2vcBveWOVZr6pxd9XTd1TdQa.jpg",
+                genres: ["Comedy", "Drama", "Romance"],
+                elo: 1500
+            },
+            {
+                id: 550,
+                title: "Fight Club",
+                year: 1999,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+                genres: ["Drama"],
+                elo: 1500
+            },
+            {
+                id: 278,
+                title: "The Shawshank Redemption",
+                year: 1994,
+                rating: 8.7,
+                poster: "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
+                genres: ["Drama", "Crime"],
+                elo: 1500
+            },
+            {
+                id: 603,
+                title: "The Matrix",
+                year: 1999,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg",
+                genres: ["Action", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 120,
+                title: "The Lord of the Rings: The Fellowship of the Ring",
+                year: 2001,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/6oom5QYQ2yQTMJIbnvbkBL9cHo6.jpg",
+                genres: ["Adventure", "Fantasy", "Action"],
+                elo: 1500
+            },
+            {
+                id: 122,
+                title: "The Lord of the Rings: The Return of the King",
+                year: 2003,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg",
+                genres: ["Adventure", "Fantasy", "Action"],
+                elo: 1500
+            },
+            {
+                id: 807,
+                title: "Se7en",
+                year: 1995,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/6yoghtyTpznpBik8EngEmJskVUO.jpg",
+                genres: ["Crime", "Mystery", "Thriller"],
+                elo: 1500
+            },
+            {
+                id: 389,
+                title: "12 Angry Men",
+                year: 1957,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/ppd84D2i9W8jXmsyInGyihiSyqz.jpg",
+                genres: ["Drama"],
+                elo: 1500
+            },
+            {
+                id: 496243,
+                title: "Parasite",
+                year: 2019,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
+                genres: ["Comedy", "Thriller", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 157336,
+                title: "Interstellar",
+                year: 2014,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+                genres: ["Adventure", "Drama", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 637,
+                title: "Life Is Beautiful",
+                year: 1997,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/74hLDKjD5aGYOotO6esUVaeISa2.jpg",
+                genres: ["Comedy", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 769,
+                title: "GoodFellas",
+                year: 1990,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/aKuFiU82s5ISJpGZp7YkIr3kCUd.jpg",
+                genres: ["Drama", "Crime"],
+                elo: 1500
+            },
+            {
+                id: 424,
+                title: "Schindler's List",
+                year: 1993,
+                rating: 8.6,
+                poster: "https://image.tmdb.org/t/p/w500/sF1U4EUQS8YHUYjNl3pMGNIQyr0.jpg",
+                genres: ["Drama", "History", "War"],
+                elo: 1500
+            },
+            {
+                id: 129,
+                title: "Spirited Away",
+                year: 2001,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg",
+                genres: ["Animation", "Family", "Fantasy"],
+                elo: 1500
+            },
+            {
+                id: 497,
+                title: "The Green Mile",
+                year: 1999,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/8VG8fDNiy50H4FedGwdSVUPoaJe.jpg",
+                genres: ["Fantasy", "Drama", "Crime"],
+                elo: 1500
+            },
+            {
+                id: 240,
+                title: "The Godfather Part II",
+                year: 1974,
+                rating: 8.6,
+                poster: "https://image.tmdb.org/t/p/w500/hek3koDUyRQq7lokkoL2J2T7bEI.jpg",
+                genres: ["Drama", "Crime"],
+                elo: 1500
+            },
+            {
+                id: 429,
+                title: "The Good, the Bad and the Ugly",
+                year: 1966,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/bX2xnavhMYjWDoZp1VM6VnU1xwe.jpg",
+                genres: ["Western"],
+                elo: 1500
+            },
+            {
+                id: 372058,
+                title: "Your Name",
+                year: 2016,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/q719jXXEzOoYaps6babgKnONONX.jpg",
+                genres: ["Animation", "Romance", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 346,
+                title: "Seven Samurai",
+                year: 1954,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/8OKmBV5BUFzmozIC3pPWKHy17kx.jpg",
+                genres: ["Action", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 121,
+                title: "The Lord of the Rings: The Two Towers",
+                year: 2002,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/5VTN0pR8gcqV3EPUHHfMGnJYN9L.jpg",
+                genres: ["Adventure", "Fantasy", "Action"],
+                elo: 1500
+            },
+            {
+                id: 244786,
+                title: "Whiplash",
+                year: 2014,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/7fn624j5lj3xTme2SgiLCeuedmO.jpg",
+                genres: ["Drama", "Music"],
+                elo: 1500
+            },
+            {
+                id: 569094,
+                title: "Spider-Man: Across the Spider-Verse",
+                year: 2023,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+                genres: ["Animation", "Action", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 510,
+                title: "One Flew Over the Cuckoo's Nest",
+                year: 1975,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/6pqBQKZwdFfYDxuLV2dWJOGrsh8.jpg",
+                genres: ["Drama"],
+                elo: 1500
+            },
+            {
+                id: 539,
+                title: "Psycho",
+                year: 1960,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg",
+                genres: ["Horror", "Thriller"],
+                elo: 1500
+            },
+            {
+                id: 598,
+                title: "City of God",
+                year: 2002,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/k7eYdWvhYQyRQoU2TB2A2Xu2TfD.jpg",
+                genres: ["Drama", "Crime"],
+                elo: 1500
+            },
+            {
+                id: 18491,
+                title: "Neon Genesis Evangelion: The End of Evangelion",
+                year: 1997,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/jyZAWKPXwa8ZHRzrXyY3KE6GZFz.jpg",
+                genres: ["Animation", "Action", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 324857,
+                title: "Spider-Man: Into the Spider-Verse",
+                year: 2018,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/iiZZdoQBEYBv6id8su7ImL0oCbD.jpg",
+                genres: ["Animation", "Action", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 311,
+                title: "Once Upon a Time in America",
+                year: 1984,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/i0enkzsL5dPeneWnjl1fCWm6L7k.jpg",
+                genres: ["Drama", "Crime"],
+                elo: 1500
+            },
+            {
+                id: 73,
+                title: "American History X",
+                year: 1998,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/c2gsmSQ2Cqv8zosqKOCwRS0GFBS.jpg",
+                genres: ["Drama"],
+                elo: 1500
+            },
+            {
+                id: 696374,
+                title: "Gabriel's Inferno",
+                year: 2020,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/oyG9TL7FcRP4EZ9Od6bXULR7K4X.jpg",
+                genres: ["Romance"],
+                elo: 1500
+            },
+            {
+                id: 637920,
+                title: "Miracle in Cell No. 7",
+                year: 2019,
+                rating: 8.3,
+                poster: "https://image.tmdb.org/t/p/w500/bOth4QmNyEkalwahfPiMVLpTcGj.jpg",
+                genres: ["Drama", "Comedy"],
+                elo: 1500
+            },
+            {
+                id: 667257,
+                title: "Capernaum",
+                year: 2018,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/mZMustl2Y3dTHrg5RZj54QAL8O6.jpg",
+                genres: ["Drama"],
+                elo: 1500
+            },
+            {
+                id: 704264,
+                title: "Primal: Tales of Savagery",
+                year: 2019,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/9NBfVvPZKmXoJpYjLhHdPuhbqDy.jpg",
+                genres: ["Animation", "Action", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 27205,
+                title: "Casablanca",
+                year: 1942,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/5K7cOHoay2mZusSLezBOY0Qxh8a.jpg",
+                genres: ["Drama", "Romance"],
+                elo: 1500
+            },
+            {
+                id: 11,
+                title: "Star Wars",
+                year: 1977,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/6FfCtAuVAW8XJjZ7eWeLibRLWTw.jpg",
+                genres: ["Adventure", "Action", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 1891,
+                title: "The Empire Strikes Back",
+                year: 1980,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/nNAeTmF4CtdSgMDplXTDPOpYzsX.jpg",
+                genres: ["Adventure", "Action", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 78,
+                title: "Blade Runner",
+                year: 1982,
+                rating: 7.9,
+                poster: "https://image.tmdb.org/t/p/w500/63N9uy8nd9j7Eog2axPQ8lbr3Wj.jpg",
+                genres: ["Sci-Fi", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 335984,
+                title: "Blade Runner 2049",
+                year: 2017,
+                rating: 7.5,
+                poster: "https://image.tmdb.org/t/p/w500/gajva2L0rPYkEWjzgFlBXCAVBE5.jpg",
+                genres: ["Sci-Fi", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 562,
+                title: "Die Hard",
+                year: 1988,
+                rating: 7.8,
+                poster: "https://image.tmdb.org/t/p/w500/yFihWxQcmqcaBR31QM6Y8gT6aYV.jpg",
+                genres: ["Action", "Thriller"],
+                elo: 1500
+            },
+            {
+                id: 68718,
+                title: "Django Unchained",
+                year: 2012,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/7oWY8VDWW7thTzWh3OKYRkWUlD5.jpg",
+                genres: ["Drama", "Western"],
+                elo: 1500
+            },
+            {
+                id: 16869,
+                title: "Inglourious Basterds",
+                year: 2009,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/7sfbEnaARXDDhKm0CZ7D7uc2sbo.jpg",
+                genres: ["Drama", "Thriller", "War"],
+                elo: 1500
+            },
+            {
+                id: 274,
+                title: "The Silence of the Lambs",
+                year: 1991,
+                rating: 8.3,
+                poster: "https://image.tmdb.org/t/p/w500/uS9m8OBk1A8eM9I042bx8XXpqAq.jpg",
+                genres: ["Crime", "Drama", "Thriller"],
+                elo: 1500
+            },
+            {
+                id: 641,
+                title: "Requiem for a Dream",
+                year: 2000,
+                rating: 8.0,
+                poster: "https://image.tmdb.org/t/p/w500/nOd6vjEmzCT0k4VYqsA2hwyi87C.jpg",
+                genres: ["Drama"],
+                elo: 1500
+            },
+            {
+                id: 745,
+                title: "The Sixth Sense",
+                year: 1999,
+                rating: 8.0,
+                poster: "https://image.tmdb.org/t/p/w500/4AfSDjjCy6T5LA1TMz0Lh2HlpZD.jpg",
+                genres: ["Mystery", "Thriller", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 1124,
+                title: "The Prestige",
+                year: 2006,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/bdN3gXuIZYaJP7ftKK2sU0nPtEA.jpg",
+                genres: ["Drama", "Mystery", "Thriller"],
+                elo: 1500
+            },
+            {
+                id: 98,
+                title: "Gladiator",
+                year: 2000,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/ty8TGRuvJLPUmAR1H1nRIsgwvim.jpg",
+                genres: ["Action", "Drama", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 197,
+                title: "Braveheart",
+                year: 1995,
+                rating: 7.9,
+                poster: "https://image.tmdb.org/t/p/w500/or1gBugydmjToAEq7OZY0owwFk.jpg",
+                genres: ["Action", "Drama", "History"],
+                elo: 1500
+            },
+            {
+                id: 500,
+                title: "Reservoir Dogs",
+                year: 1992,
+                rating: 8.1,
+                poster: "https://image.tmdb.org/t/p/w500/lsBnfAKqEYdILs382AiGzKx5WOA.jpg",
+                genres: ["Crime", "Thriller"],
+                elo: 1500
+            },
+            {
+                id: 185,
+                title: "A Clockwork Orange",
+                year: 1971,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/4sHeTAp65WrSSuc05nRBKddhBxO.jpg",
+                genres: ["Sci-Fi", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 872585,
+                title: "Oppenheimer",
+                year: 2023,
+                rating: 8.1,
+                poster: "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+                genres: ["Drama", "History"],
+                elo: 1500
+            },
+            {
+                id: 533535,
+                title: "Deadpool & Wolverine",
+                year: 2024,
+                rating: 7.7,
+                poster: "https://image.tmdb.org/t/p/w500/8cdWjvZQUExUUTzyp4t6EDMubfO.jpg",
+                genres: ["Action", "Comedy", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 438631,
+                title: "Dune",
+                year: 2021,
+                rating: 7.8,
+                poster: "https://image.tmdb.org/t/p/w500/d5NXSklXo0qyIYkgV94XAgMIckC.jpg",
+                genres: ["Sci-Fi", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 693134,
+                title: "Dune: Part Two",
+                year: 2024,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/8b8R8l88Qje9dn9OE8PY05Nxl1X.jpg",
+                genres: ["Sci-Fi", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 324786,
+                title: "Hacksaw Ridge",
+                year: 2016,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/bndiUFfJxNd2fYx8XO610L9a07m.jpg",
+                genres: ["Drama", "History", "War"],
+                elo: 1500
+            },
+            {
+                id: 19404,
+                title: "Dilwale Dulhania Le Jayenge",
+                year: 1995,
+                rating: 8.5,
+                poster: "https://image.tmdb.org/t/p/w500/ktejodbcdCPXbMMdnpI9BUxW6O8.jpg",
+                genres: ["Comedy", "Drama", "Romance"],
+                elo: 1500
+            },
+            {
+                id: 82,
+                title: "Raiders of the Lost Ark",
+                year: 1981,
+                rating: 8.1,
+                poster: "https://image.tmdb.org/t/p/w500/ceG9VzoRAVGwivFU403Wc3AHRys.jpg",
+                genres: ["Adventure", "Action"],
+                elo: 1500
+            },
+            {
+                id: 620,
+                title: "Ghostbusters",
+                year: 1984,
+                rating: 7.6,
+                poster: "https://image.tmdb.org/t/p/w500/8Od5zV7Q7zNOX0y9tyNgpTmoiGA.jpg",
+                genres: ["Comedy", "Fantasy"],
+                elo: 1500
+            },
+            {
+                id: 105,
+                title: "Back to the Future",
+                year: 1985,
+                rating: 8.3,
+                poster: "https://image.tmdb.org/t/p/w500/fNOH9f1aA7XRTzl1sAOx9iF553Q.jpg",
+                genres: ["Adventure", "Comedy", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 857,
+                title: "Saving Private Ryan",
+                year: 1998,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/uqx37cS8cpHg8U35f9U5IBlrCV3.jpg",
+                genres: ["Drama", "History", "War"],
+                elo: 1500
+            },
+            {
+                id: 424694,
+                title: "Bohemian Rhapsody",
+                year: 2018,
+                rating: 8.0,
+                poster: "https://image.tmdb.org/t/p/w500/lHu1wtNaczFPGFDTrjCSzeLPTKN.jpg",
+                genres: ["Music", "Drama", "History"],
+                elo: 1500
+            },
+            {
+                id: 475557,
+                title: "Joker",
+                year: 2019,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/udDclJoHjfjb8Ekgsd4FDteOkCU.jpg",
+                genres: ["Crime", "Thriller", "Drama"],
+                elo: 1500
+            },
+            {
+                id: 299536,
+                title: "Avengers: Infinity War",
+                year: 2018,
+                rating: 8.3,
+                poster: "https://image.tmdb.org/t/p/w500/7WsyChQLEftFiDOVTGkv3hFpyyt.jpg",
+                genres: ["Adventure", "Action", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 299534,
+                title: "Avengers: Endgame",
+                year: 2019,
+                rating: 8.3,
+                poster: "https://image.tmdb.org/t/p/w500/or06FN3Dka5tukK1e9sl16pB3iy.jpg",
+                genres: ["Adventure", "Sci-Fi", "Action"],
+                elo: 1500
+            },
+            {
+                id: 629,
+                title: "The Usual Suspects",
+                year: 1995,
+                rating: 8.1,
+                poster: "https://image.tmdb.org/t/p/w500/bUPmtQzrRhzqYySeiMpv7GurAfm.jpg",
+                genres: ["Drama", "Crime", "Thriller"],
+                elo: 1500
+            },
+            {
+                id: 77,
+                title: "Memento",
+                year: 2000,
+                rating: 8.2,
+                poster: "https://image.tmdb.org/t/p/w500/yuNs09hvpHVU1cBTCAk9zxsL2oW.jpg",
+                genres: ["Mystery", "Thriller"],
+                elo: 1500
+            },
+            {
+                id: 329,
+                title: "Jurassic Park",
+                year: 1993,
+                rating: 7.9,
+                poster: "https://image.tmdb.org/t/p/w500/9i3plLl89DHMz7mahksDaAo7HIS.jpg",
+                genres: ["Adventure", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 489,
+                title: "Good Will Hunting",
+                year: 1997,
+                rating: 8.3,
+                poster: "https://image.tmdb.org/t/p/w500/bABCBKYBK7A5G1x0FzoeoNfuj2b.jpg",
+                genres: ["Drama"],
+                elo: 1500
+            },
+            {
+                id: 568332,
+                title: "Taylor Swift: The Eras Tour",
+                year: 2023,
+                rating: 8.4,
+                poster: "https://image.tmdb.org/t/p/w500/qW9xTn79vwsn1hO7WORUNLMgmTQ.jpg",
+                genres: ["Music", "Documentary"],
+                elo: 1500
+            },
+            {
+                id: 38,
+                title: "Eternal Sunshine of the Spotless Mind",
+                year: 2004,
+                rating: 8.1,
+                poster: "https://image.tmdb.org/t/p/w500/5MwkWH9tYHv3mV9OdYTMR5qreIz.jpg",
+                genres: ["Sci-Fi", "Drama", "Romance"],
+                elo: 1500
+            },
+            {
+                id: 334541,
+                title: "Manchester by the Sea",
+                year: 2016,
+                rating: 7.8,
+                poster: "https://image.tmdb.org/t/p/w500/e8daDzP0vFOnGyKmve95Yv8Do5F.jpg",
+                genres: ["Drama"],
+                elo: 1500
+            },
+            {
+                id: 76600,
+                title: "Avatar: The Way of Water",
+                year: 2022,
+                rating: 7.7,
+                poster: "https://image.tmdb.org/t/p/w500/t6HIqrRAclMCA60NsSmeqe9RmNV.jpg",
+                genres: ["Sci-Fi", "Adventure", "Action"],
+                elo: 1500
+            },
+            {
+                id: 19995,
+                title: "Avatar",
+                year: 2009,
+                rating: 7.6,
+                poster: "https://image.tmdb.org/t/p/w500/kyeqWdyUXW608qlYkRqosgbbJyK.jpg",
+                genres: ["Action", "Adventure", "Fantasy"],
+                elo: 1500
+            },
+            {
+                id: 597,
+                title: "Titanic",
+                year: 1997,
+                rating: 7.9,
+                poster: "https://image.tmdb.org/t/p/w500/9xjZS2rlVxm8SFx8kPC3aIGCOYQ.jpg",
+                genres: ["Drama", "Romance"],
+                elo: 1500
+            },
+            {
+                id: 109445,
+                title: "Frozen",
+                year: 2013,
+                rating: 7.3,
+                poster: "https://image.tmdb.org/t/p/w500/kgwjIb2JDHRhNk13lmSxiClFjVk.jpg",
+                genres: ["Animation", "Adventure", "Family"],
+                elo: 1500
+            },
+            {
+                id: 862,
+                title: "Toy Story",
+                year: 1995,
+                rating: 8.0,
+                poster: "https://image.tmdb.org/t/p/w500/uXDfjJbdP4ijW5hWSBrPrlKpxab.jpg",
+                genres: ["Animation", "Adventure", "Family"],
+                elo: 1500
+            },
+            {
+                id: 12,
+                title: "Finding Nemo",
+                year: 2003,
+                rating: 7.8,
+                poster: "https://image.tmdb.org/t/p/w500/eHuGQ10FUzK1mdOY69wF5pGgEf5.jpg",
+                genres: ["Animation", "Family"],
+                elo: 1500
+            },
+            {
+                id: 585,
+                title: "Monsters, Inc.",
+                year: 2001,
+                rating: 7.8,
+                poster: "https://image.tmdb.org/t/p/w500/sgheSKxZkttIe8ONsf2sKu62AvV.jpg",
+                genres: ["Animation", "Comedy", "Family"],
+                elo: 1500
+            },
+            {
+                id: 150540,
+                title: "Inside Out",
+                year: 2015,
+                rating: 7.9,
+                poster: "https://image.tmdb.org/t/p/w500/2H1TmgdfNtsKlU9jKdeNyYL5y8T.jpg",
+                genres: ["Animation", "Family", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 1726,
+                title: "Iron Man",
+                year: 2008,
+                rating: 7.6,
+                poster: "https://image.tmdb.org/t/p/w500/78lPtwv72eTNqFW9COBYI0dWDJa.jpg",
+                genres: ["Action", "Sci-Fi", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 100402,
+                title: "Captain America: The Winter Soldier",
+                year: 2014,
+                rating: 7.7,
+                poster: "https://image.tmdb.org/t/p/w500/tVFRpFw3xTedgPGqxW0AOI8Qhh0.jpg",
+                genres: ["Action", "Adventure", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 118340,
+                title: "Guardians of the Galaxy",
+                year: 2014,
+                rating: 7.9,
+                poster: "https://image.tmdb.org/t/p/w500/r7vmZjiyZw9rpJMQJhXpjjLT7s1.jpg",
+                genres: ["Action", "Adventure", "Comedy"],
+                elo: 1500
+            },
+            {
+                id: 284054,
+                title: "Black Panther",
+                year: 2018,
+                rating: 7.4,
+                poster: "https://image.tmdb.org/t/p/w500/uxzzxijgPIY7slzFvMotPv8wjKA.jpg",
+                genres: ["Action", "Adventure", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 453395,
+                title: "Doctor Strange in the Multiverse of Madness",
+                year: 2022,
+                rating: 7.3,
+                poster: "https://image.tmdb.org/t/p/w500/9Gtg2DzBhmYamXBS1hKAhiwbBKS.jpg",
+                genres: ["Fantasy", "Action", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 634649,
+                title: "Spider-Man: No Way Home",
+                year: 2021,
+                rating: 8.0,
+                poster: "https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg",
+                genres: ["Action", "Adventure", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 315162,
+                title: "Puss in Boots: The Last Wish",
+                year: 2022,
+                rating: 8.3,
+                poster: "https://image.tmdb.org/t/p/w500/kuf6dutpsT0vSVehic3EZIqkOBt.jpg",
+                genres: ["Animation", "Adventure", "Fantasy"],
+                elo: 1500
+            },
+            {
+                id: 671,
+                title: "Harry Potter and the Philosopher's Stone",
+                year: 2001,
+                rating: 7.9,
+                poster: "https://image.tmdb.org/t/p/w500/wuMc08IPKEatf9rnMNXvIDxqP4W.jpg",
+                genres: ["Adventure", "Fantasy"],
+                elo: 1500
+            },
+            {
+                id: 12444,
+                title: "Harry Potter and the Deathly Hallows: Part 2",
+                year: 2011,
+                rating: 8.1,
+                poster: "https://image.tmdb.org/t/p/w500/c54HpQmuwXjHq2C9wmoACjxoomW.jpg",
+                genres: ["Fantasy", "Adventure"],
+                elo: 1500
+            },
+            {
+                id: 22,
+                title: "Pirates of the Caribbean: The Curse of the Black Pearl",
+                year: 2003,
+                rating: 7.8,
+                poster: "https://image.tmdb.org/t/p/w500/z8onk7LV9Mmw6zKz4hT6pzzvmvl.jpg",
+                genres: ["Adventure", "Fantasy", "Action"],
+                elo: 1500
+            },
+            {
+                id: 1895,
+                title: "Star Wars: Episode III - Revenge of the Sith",
+                year: 2005,
+                rating: 7.4,
+                poster: "https://image.tmdb.org/t/p/w500/xfSAoBEm9MNBjmlNcDYLvLSMlnq.jpg",
+                genres: ["Adventure", "Action", "Sci-Fi"],
+                elo: 1500
+            },
+            {
+                id: 140607,
+                title: "Star Wars: The Force Awakens",
+                year: 2015,
+                rating: 7.3,
+                poster: "https://image.tmdb.org/t/p/w500/wqnLdwVXoBjKibFRR5U3y0Mb6KN.jpg",
+                genres: ["Adventure", "Action", "Sci-Fi"],
+                elo: 1500
+            }
+        ];
+
+        // AI matchup suggestions based on movie pairings
+        const aiSuggestions = [
+            "Both are critically acclaimed thrillers from visionary directors. This matchup will help us understand if you prefer cerebral puzzles or grounded intensity.",
+            "A classic showdown: epic spectacle versus intimate character study. Your choice reveals a lot about what moves you in cinema.",
+            "Two films that redefined their genres. Do you lean toward innovation in storytelling or mastery of established forms?",
+            "This pairing tests your preference: do you value emotional depth or visceral excitement?",
+            "Both are considered masterpieces. This comparison will sharpen your ranking considerably.",
+            "An interesting contrast in pacing and tone. Your selection will help calibrate future matchups.",
+            "Two films with devoted followings. This choice often surprises people about their own taste."
+        ];
+
+        // ============================================
+        // APP STATE
+        // ============================================
+        let state = {
+            movies: [...movieDatabase],
+            comparisons: 0,
+            currentMatchup: { left: null, right: null },
+            rankedMovies: new Set(),
+            recentlyAdded: [], // Movies user added that should appear soon
+            tasteProfile: {}, // Genre preferences: { "Action": 5, "Drama": -2, ... }
+            decadePreference: {}, // { "1990s": 3, "2020s": 1, ... }
+            matchupMode: 'smart', // 'smart' or 'random'
+            userGenrePrefs: [], // Genres selected at start
+            userEraPrefs: [] // Eras selected at start
+        };
+
+        // ============================================
+        // PREFERENCE SELECTION
+        // ============================================
+        function toggleGenrePref(btn) {
+            btn.classList.toggle('selected');
+        }
+
+        function toggleEraPref(btn) {
+            btn.classList.toggle('selected');
+        }
+
+        function startRanking() {
+            // Collect selected genres
+            const genreBtns = document.querySelectorAll('#genre-options .pref-btn.selected');
+            state.userGenrePrefs = Array.from(genreBtns).map(btn => btn.dataset.genre);
+            
+            // Collect selected eras
+            const eraBtns = document.querySelectorAll('#era-options .pref-btn.selected');
+            state.userEraPrefs = Array.from(eraBtns).map(btn => btn.dataset.era);
+            
+            // Apply initial taste profile boost based on selections
+            state.userGenrePrefs.forEach(genre => {
+                state.tasteProfile[genre] = 3; // Give a starting boost
+            });
+            
+            // Filter movies to prefer user's selections (but keep all movies available)
+            filterMoviesByPreferences();
+            
+            // Hide preferences, show main content
+            document.getElementById('preferences-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'grid';
+            
+            // Start the first matchup
+            selectMatchup();
+            updateStats();
+        }
+
+        function skipPreferences() {
+            // No preferences set, show everything
+            document.getElementById('preferences-screen').style.display = 'none';
+            document.getElementById('main-content').style.display = 'grid';
+            
+            selectMatchup();
+            updateStats();
+        }
+
+        function filterMoviesByPreferences() {
+            // If no preferences selected, keep all movies
+            if (state.userGenrePrefs.length === 0 && state.userEraPrefs.length === 0) {
+                return;
+            }
+            
+            // Score each movie based on how well it matches preferences
+            state.movies.forEach(movie => {
+                let prefScore = 0;
+                
+                // Genre matching
+                if (state.userGenrePrefs.length > 0) {
+                    const genreMatches = movie.genres.filter(g => state.userGenrePrefs.includes(g)).length;
+                    prefScore += genreMatches * 2;
+                }
+                
+                // Era matching
+                if (state.userEraPrefs.length > 0) {
+                    const movieEra = getMovieEraCategory(movie.year);
+                    if (state.userEraPrefs.includes(movieEra)) {
+                        prefScore += 3;
+                    }
+                }
+                
+                // Store preference score for matchup selection
+                movie.prefScore = prefScore;
+            });
+        }
+
+        function getMovieEraCategory(year) {
+            if (year < 1980) return 'classic';
+            if (year < 2000) return 'golden';
+            if (year < 2010) return 'modern';
+            if (year < 2020) return 'recent';
+            return 'new';
+        }
+
+        // ============================================
+        // TMDB API CONFIGURATION
+        // ============================================
+        const TMDB_API_KEY = '4c8e6ce584d7879f3db75c182eb15d7d';
+        const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+        const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
+
+        // Genre ID to name mapping from TMDB
+        const genreMap = {
+            28: 'Action', 12: 'Adventure', 16: 'Animation', 35: 'Comedy',
+            80: 'Crime', 99: 'Documentary', 18: 'Drama', 10751: 'Family',
+            14: 'Fantasy', 36: 'History', 27: 'Horror', 10402: 'Music',
+            9648: 'Mystery', 10749: 'Romance', 878: 'Sci-Fi', 10770: 'TV Movie',
+            53: 'Thriller', 10752: 'War', 37: 'Western'
+        };
+
+        // ============================================
+        // SEARCH FUNCTIONALITY (TMDB API)
+        // ============================================
+        async function searchMovies() {
+            const query = document.getElementById('movie-search').value.trim();
+            const resultsContainer = document.getElementById('search-results');
+            
+            if (query.length < 2) {
+                resultsContainer.classList.remove('active');
+                return;
+            }
+            
+            resultsContainer.innerHTML = '<div class="no-results">Searching...</div>';
+            resultsContainer.classList.add('active');
+            
+            try {
+                // Search TMDB API
+                const response = await fetch(
+                    `${TMDB_BASE_URL}/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(query)}&language=en-US&page=1`
+                );
+                const data = await response.json();
+                
+                if (!data.results || data.results.length === 0) {
+                    resultsContainer.innerHTML = '<div class="no-results">No movies found. Try a different search term.</div>';
+                    return;
+                }
+                
+                // Take top 8 results
+                const results = data.results.slice(0, 8);
+                
+                const isInRotation = (id) => state.movies.some(m => m.id === id);
+                
+                resultsContainer.innerHTML = results.map(movie => {
+                    const year = movie.release_date ? movie.release_date.substring(0, 4) : 'N/A';
+                    const genres = movie.genre_ids.slice(0, 2).map(id => genreMap[id] || 'Other').join(', ');
+                    const posterUrl = movie.poster_path ? `${TMDB_IMAGE_BASE}${movie.poster_path}` : '';
+                    
+                    return `
+                        <div class="search-result-item">
+                            ${posterUrl 
+                                ? `<img class="search-result-poster" src="${posterUrl}" alt="${movie.title}">`
+                                : '<div class="search-result-poster">🎬</div>'
+                            }
+                            <div class="search-result-info">
+                                <div class="search-result-title">${movie.title}</div>
+                                <div class="search-result-year">${year} · ${genres || 'N/A'}</div>
+                            </div>
+                            ${isInRotation(movie.id) 
+                                ? '<span class="search-result-added">In Rotation</span>'
+                                : `<button class="search-result-add" onclick='addMovieFromTMDB(${JSON.stringify({
+                                    id: movie.id,
+                                    title: movie.title,
+                                    year: parseInt(year) || 2000,
+                                    rating: movie.vote_average || 0,
+                                    poster: posterUrl,
+                                    genres: movie.genre_ids.map(id => genreMap[id] || 'Other')
+                                }).replace(/'/g, "&#39;")})'>Add</button>`
+                            }
+                        </div>
+                    `;
+                }).join('');
+                
+            } catch (error) {
+                console.error('TMDB search error:', error);
+                resultsContainer.innerHTML = '<div class="no-results">Search failed. Please try again.</div>';
+            }
+        }
+
+        function addMovieFromTMDB(movie) {
+            // Check if already in rotation
+            if (state.movies.some(m => m.id === movie.id)) return;
+            
+            // Add to movies list with fresh Elo
+            const newMovie = { ...movie, elo: 1500 };
+            state.movies.push(newMovie);
+            
+            // Also add to movieDatabase so future local searches find it
+            movieDatabase.push(newMovie);
+            
+            // Add to recently added so it shows up in matchups soon
+            state.recentlyAdded.push(movie.id);
+            
+            // Refresh search results to show "In Rotation"
+            searchMovies();
+            
+            // If we have a recently added movie, use it in the next matchup
+            if (state.recentlyAdded.length === 1) {
+                selectMatchupWithNewMovie(movie.id);
+            }
+        }
+
+        function addMovieToRotation(movieId) {
+            const movie = movieDatabase.find(m => m.id === movieId);
+            if (!movie) return;
+            
+            // Check if already in rotation
+            if (state.movies.some(m => m.id === movieId)) return;
+            
+            // Add to movies list with fresh Elo
+            const newMovie = { ...movie, elo: 1500 };
+            state.movies.push(newMovie);
+            
+            // Add to recently added so it shows up in matchups soon
+            state.recentlyAdded.push(movieId);
+            
+            // Refresh search results to show "In Rotation"
+            searchMovies();
+            
+            // If we have a recently added movie, use it in the next matchup
+            if (state.recentlyAdded.length === 1) {
+                selectMatchupWithNewMovie(movieId);
+            }
+        }
+
+        function selectMatchupWithNewMovie(newMovieId) {
+            const newMovie = state.movies.find(m => m.id === newMovieId);
+            if (!newMovie) return;
+            
+            // Pick a random opponent from existing ranked movies, or any movie
+            let opponents = state.movies.filter(m => 
+                m.id !== newMovieId && state.rankedMovies.has(m.id)
+            );
+            
+            if (opponents.length === 0) {
+                opponents = state.movies.filter(m => m.id !== newMovieId);
+            }
+            
+            const opponent = opponents[Math.floor(Math.random() * opponents.length)];
+            
+            // Randomly assign sides
+            if (Math.random() > 0.5) {
+                state.currentMatchup.left = newMovie;
+                state.currentMatchup.right = opponent;
+            } else {
+                state.currentMatchup.left = opponent;
+                state.currentMatchup.right = newMovie;
+            }
+            
+            updateMatchupDisplay();
+        }
+
+        // Allow Enter key to search
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('movie-search').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') searchMovies();
+            });
+            
+            // Close search results when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.add-movie-section')) {
+                    document.getElementById('search-results').classList.remove('active');
+                }
+            });
+        });
+
+        // ============================================
+        // TASTE PROFILE TRACKING
+        // ============================================
+        function updateTasteProfile(winner, loser) {
+            // Update genre preferences
+            winner.genres.forEach(genre => {
+                state.tasteProfile[genre] = (state.tasteProfile[genre] || 0) + 1;
+            });
+            loser.genres.forEach(genre => {
+                state.tasteProfile[genre] = (state.tasteProfile[genre] || 0) - 0.5;
+            });
+            
+            // Update decade preferences
+            const winnerDecade = Math.floor(winner.year / 10) * 10 + 's';
+            const loserDecade = Math.floor(loser.year / 10) * 10 + 's';
+            state.decadePreference[winnerDecade] = (state.decadePreference[winnerDecade] || 0) + 1;
+            state.decadePreference[loserDecade] = (state.decadePreference[loserDecade] || 0) - 0.3;
+            
+            // Update the UI
+            updateTasteProfileUI();
+        }
+
+        function updateTasteProfileUI() {
+            const tagsContainer = document.getElementById('taste-tags');
+            
+            // Get top genres (score > 1)
+            const topGenres = Object.entries(state.tasteProfile)
+                .filter(([_, score]) => score > 1)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            // Get top decades
+            const topDecades = Object.entries(state.decadePreference)
+                .filter(([_, score]) => score > 1)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 2);
+            
+            if (topGenres.length === 0 && topDecades.length === 0) {
+                tagsContainer.innerHTML = '<span class="taste-tag empty">Make some choices to discover your taste...</span>';
+                return;
+            }
+            
+            let html = '';
+            
+            topGenres.forEach(([genre, score]) => {
+                const strength = score > 5 ? 'strong' : 'positive';
+                html += `<span class="taste-tag ${strength}">${genre}</span>`;
+            });
+            
+            topDecades.forEach(([decade, score]) => {
+                const strength = score > 3 ? 'strong' : 'positive';
+                html += `<span class="taste-tag ${strength}">${decade}</span>`;
+            });
+            
+            tagsContainer.innerHTML = html;
+        }
+
+        // ============================================
+        // SMART MATCHUP GENERATION
+        // ============================================
+        function getMovieScore(movie) {
+            // Score based on how well this movie matches user's taste
+            let score = 0;
+            
+            movie.genres.forEach(genre => {
+                score += (state.tasteProfile[genre] || 0) * 2;
+            });
+            
+            const decade = Math.floor(movie.year / 10) * 10 + 's';
+            score += (state.decadePreference[decade] || 0);
+            
+            // Add preference score if set
+            score += (movie.prefScore || 0);
+            
+            return score;
+        }
+
+        // ============================================
+        // MOVIE ERA CATEGORIES
+        // ============================================
+        function getMovieEra(movie) {
+            const year = movie.year;
+            if (year < 2000) return 'classic';        // All-time classics (pre-2000)
+            if (year < 2015) return 'modern';         // Modern classics (2000-2014)
+            return 'recent';                          // Recent/still in memory (2015+)
+        }
+
+        function selectMovieByPreferences() {
+            // If user has preferences, prioritize matching movies
+            const hasGenrePrefs = state.userGenrePrefs.length > 0;
+            const hasEraPrefs = state.userEraPrefs.length > 0;
+            
+            if (!hasGenrePrefs && !hasEraPrefs) {
+                // No preferences - use original era-weighted selection
+                return selectMovieByEraDefault();
+            }
+            
+            // 70% chance to pick from preferences, 30% from ALL movies (including unselected genres)
+            // This ensures variety and discovery even when preferences are set
+            if (Math.random() < 0.30) {
+                // Pick from any movie for variety/discovery
+                return state.movies[Math.floor(Math.random() * state.movies.length)];
+            }
+            
+            // Filter movies that match user preferences
+            let candidates = state.movies.filter(movie => {
+                let matches = false;
+                
+                // Check genre match
+                if (hasGenrePrefs) {
+                    const genreMatch = movie.genres.some(g => state.userGenrePrefs.includes(g));
+                    if (genreMatch) matches = true;
+                }
+                
+                // Check era match
+                if (hasEraPrefs) {
+                    const movieEra = getMovieEraCategory(movie.year);
+                    if (state.userEraPrefs.includes(movieEra)) matches = true;
+                }
+                
+                return matches;
+            });
+            
+            // If no matches (shouldn't happen), fall back to all movies
+            if (candidates.length === 0) {
+                candidates = state.movies;
+            }
+            
+            return candidates[Math.floor(Math.random() * candidates.length)];
+        }
+
+        function selectMovieByEraDefault() {
+            // Original: 50% all-time classics, 25% modern classics, 25% recent
+            const roll = Math.random();
+            let targetEra;
+            
+            if (roll < 0.50) {
+                targetEra = 'classic';
+            } else if (roll < 0.75) {
+                targetEra = 'modern';
+            } else {
+                targetEra = 'recent';
+            }
+            
+            // Get movies from target era
+            const eraMovies = state.movies.filter(m => getMovieEra(m) === targetEra);
+            
+            // If no movies in that era, fall back to any movie
+            if (eraMovies.length === 0) {
+                return state.movies[Math.floor(Math.random() * state.movies.length)];
+            }
+            
+            return eraMovies[Math.floor(Math.random() * eraMovies.length)];
+        }
+
+        function selectMatchup() {
+            // Check if we have recently added movies to prioritize
+            if (state.recentlyAdded.length > 0) {
+                const movieId = state.recentlyAdded.shift();
+                selectMatchupWithNewMovie(movieId);
+                return;
+            }
+
+            // For early comparisons (first 20), use preference-weighted selection
+            if (state.comparisons < 20) {
+                const movie1 = selectMovieByPreferences();
+                let movie2 = selectMovieByPreferences();
+                
+                // Make sure we don't pick the same movie twice
+                let attempts = 0;
+                while (movie2.id === movie1.id && attempts < 10) {
+                    movie2 = selectMovieByPreferences();
+                    attempts++;
+                }
+                
+                // Randomly assign left/right
+                if (Math.random() > 0.5) {
+                    state.currentMatchup.left = movie1;
+                    state.currentMatchup.right = movie2;
+                } else {
+                    state.currentMatchup.left = movie2;
+                    state.currentMatchup.right = movie1;
+                }
+                
+                updateMatchupDisplay();
+                return;
+            }
+
+            // After 20 comparisons, use smart matchup based on Elo and taste
+            const moviesWithScores = state.movies.map(m => ({
+                movie: m,
+                tasteScore: getMovieScore(m),
+                elo: m.elo
+            }));
+            
+            // Sort by combination of Elo and taste match
+            moviesWithScores.sort((a, b) => {
+                // Prioritize movies that match taste profile
+                const tasteWeight = state.comparisons > 10 ? 0.3 : 0.1;
+                const scoreA = a.elo + (a.tasteScore * 50 * tasteWeight);
+                const scoreB = b.elo + (b.tasteScore * 50 * tasteWeight);
+                return scoreB - scoreA;
+            });
+            
+            // Find two movies with close scores for an interesting matchup
+            let bestPair = { i: 0, j: 1, diff: Infinity };
+            const candidateCount = Math.min(moviesWithScores.length, 15);
+            
+            for (let i = 0; i < candidateCount - 1; i++) {
+                for (let j = i + 1; j < candidateCount; j++) {
+                    const diff = Math.abs(moviesWithScores[i].elo - moviesWithScores[j].elo);
+                    // Add randomness to avoid repetitive matchups
+                    const randomFactor = Math.random() * 100;
+                    
+                    // Bonus for genre diversity (interesting matchups)
+                    const genreOverlap = moviesWithScores[i].movie.genres.filter(g => 
+                        moviesWithScores[j].movie.genres.includes(g)
+                    ).length;
+                    const diversityBonus = genreOverlap === 0 ? -30 : 0;
+                    
+                    if (diff + randomFactor + diversityBonus < bestPair.diff + 50) {
+                        bestPair = { i, j, diff };
+                    }
+                }
+            }
+            
+            // Randomly assign left/right
+            if (Math.random() > 0.5) {
+                state.currentMatchup.left = moviesWithScores[bestPair.i].movie;
+                state.currentMatchup.right = moviesWithScores[bestPair.j].movie;
+            } else {
+                state.currentMatchup.left = moviesWithScores[bestPair.j].movie;
+                state.currentMatchup.right = moviesWithScores[bestPair.i].movie;
+            }
+            
+            updateMatchupDisplay();
+        }
+
+        // ============================================
+        // ELO RATING SYSTEM
+        // ============================================
+        function calculateElo(winnerElo, loserElo, kFactor = 32) {
+            const expectedWinner = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
+            const expectedLoser = 1 / (1 + Math.pow(10, (winnerElo - loserElo) / 400));
+            
+            return {
+                newWinnerElo: Math.round(winnerElo + kFactor * (1 - expectedWinner)),
+                newLoserElo: Math.round(loserElo + kFactor * (0 - expectedLoser))
+            };
+        }
+
+        // ============================================
+        // UI UPDATES
+        // ============================================
+        async function fetchPosterForMovie(movie) {
+            // If movie already has a working poster URL, skip
+            if (movie.posterFetched) return movie.poster;
+            
+            try {
+                const response = await fetch(
+                    `${TMDB_BASE_URL}/movie/${movie.id}?api_key=${TMDB_API_KEY}`
+                );
+                const data = await response.json();
+                
+                if (data.poster_path) {
+                    movie.poster = `${TMDB_IMAGE_BASE}${data.poster_path}`;
+                    movie.posterFetched = true;
+                }
+            } catch (error) {
+                console.log('Could not fetch poster for', movie.title);
+            }
+            
+            return movie.poster;
+        }
+
+        async function updateMatchupDisplay() {
+            const left = state.currentMatchup.left;
+            const right = state.currentMatchup.right;
+            
+            // Reset poster visibility (in case previous image failed)
+            const posterLeft = document.getElementById('poster-left');
+            const posterRight = document.getElementById('poster-right');
+            const placeholderLeft = document.getElementById('placeholder-left');
+            const placeholderRight = document.getElementById('placeholder-right');
+            
+            // Show placeholders first, then try to load images
+            placeholderLeft.style.display = 'flex';
+            placeholderRight.style.display = 'flex';
+            posterLeft.style.display = 'none';
+            posterRight.style.display = 'none';
+            
+            // Try to load posters
+            if (left.poster) {
+                const imgLeft = new Image();
+                imgLeft.onload = function() {
+                    posterLeft.src = left.poster;
+                    posterLeft.style.display = 'block';
+                    placeholderLeft.style.display = 'none';
+                };
+                imgLeft.onerror = function() {
+                    console.log('Failed to load left poster:', left.poster);
+                };
+                imgLeft.src = left.poster;
+            }
+            
+            if (right.poster) {
+                const imgRight = new Image();
+                imgRight.onload = function() {
+                    posterRight.src = right.poster;
+                    posterRight.style.display = 'block';
+                    placeholderRight.style.display = 'none';
+                };
+                imgRight.onerror = function() {
+                    console.log('Failed to load right poster:', right.poster);
+                };
+                imgRight.src = right.poster;
+            }
+            
+            document.getElementById('title-left').textContent = left.title;
+            document.getElementById('year-left').textContent = left.year;
+            document.getElementById('rating-left').textContent = left.rating.toFixed(1);
+            
+            document.getElementById('title-right').textContent = right.title;
+            document.getElementById('year-right').textContent = right.year;
+            document.getElementById('rating-right').textContent = right.rating.toFixed(1);
+            
+            // Random AI suggestion
+            const suggestion = aiSuggestions[Math.floor(Math.random() * aiSuggestions.length)];
+            document.getElementById('ai-text').textContent = suggestion;
+            
+            // Clear selection styling
+            document.getElementById('movie-left').classList.remove('selected');
+            document.getElementById('movie-right').classList.remove('selected');
+        }
+
+        function updateStats() {
+            document.getElementById('comparisons-count').textContent = state.comparisons;
+            document.getElementById('movies-ranked').textContent = state.rankedMovies.size;
+            
+            if (state.comparisons >= 5) {
+                const confidence = Math.min(95, 50 + state.comparisons * 3);
+                document.getElementById('confidence-score').textContent = confidence + '%';
+            }
+        }
+
+        function updateRankingList() {
+            const sorted = [...state.movies]
+                .filter(m => state.rankedMovies.has(m.id))
+                .sort((a, b) => b.elo - a.elo)
+                .slice(0, 100);
+            
+            const list = document.getElementById('ranking-list');
+            const countEl = document.getElementById('rankings-count');
+            
+            countEl.textContent = `${sorted.length} ranked`;
+            
+            if (sorted.length === 0) {
+                list.innerHTML = `
+                    <li class="empty-ranking">
+                        Click on movies to pick your favorites.<br>
+                        Your personalized Top 100 will appear here.
+                    </li>
+                `;
+                return;
+            }
+            
+            list.innerHTML = sorted.map((movie, index) => {
+                let rankClass = '';
+                if (index < 3) rankClass = 'top-3';
+                else if (index < 10) rankClass = 'top-10';
+                
+                const posterHtml = movie.poster 
+                    ? `<img class="rank-poster" src="${movie.poster}" alt="${movie.title}" onerror="this.outerHTML='<div class=\\'rank-poster-placeholder\\'>🎬</div>'">`
+                    : '<div class="rank-poster-placeholder">🎬</div>';
+                
+                return `
+                    <li class="ranking-item">
+                        <span class="rank-number ${rankClass}">${index + 1}</span>
+                        ${posterHtml}
+                        <div class="rank-info">
+                            <div class="rank-title">${movie.title}</div>
+                            <div class="rank-meta">
+                                <span class="rank-year">${movie.year}</span>
+                                <span class="rank-score">★ ${movie.rating.toFixed(1)}</span>
+                            </div>
+                        </div>
+                        <span class="elo-badge">${movie.elo}</span>
+                    </li>
+                `;
+            }).join('');
+
+            // Show share section once user has ranked at least 5 movies
+            const shareSection = document.getElementById('share-section');
+            if (sorted.length >= 5) {
+                shareSection.style.display = 'block';
+            }
+        }
+
+        // ============================================
+        // USER ACTIONS
+        // ============================================
+        function selectMovie(side) {
+            const winner = side === 'left' ? state.currentMatchup.left : state.currentMatchup.right;
+            const loser = side === 'left' ? state.currentMatchup.right : state.currentMatchup.left;
+            
+            // Visual feedback
+            document.getElementById(`movie-${side}`).classList.add('selected');
+            
+            // Calculate new Elo ratings
+            const { newWinnerElo, newLoserElo } = calculateElo(winner.elo, loser.elo);
+            
+            // Update in state
+            const winnerIndex = state.movies.findIndex(m => m.id === winner.id);
+            const loserIndex = state.movies.findIndex(m => m.id === loser.id);
+            
+            state.movies[winnerIndex].elo = newWinnerElo;
+            state.movies[loserIndex].elo = newLoserElo;
+            
+            // Track ranked movies
+            state.rankedMovies.add(winner.id);
+            state.rankedMovies.add(loser.id);
+            
+            // Update taste profile based on choice
+            updateTasteProfile(winner, loser);
+            
+            state.comparisons++;
+            
+            // Update UI after short delay for visual feedback
+            setTimeout(() => {
+                updateStats();
+                updateRankingList();
+                selectMatchup();
+            }, 300);
+        }
+
+        function skipMatchup() {
+            selectMatchup();
+        }
+
+        // Haven't seen one of the movies - remove it from rotation and get new matchup
+        function haventSeen(side) {
+            const unseenMovie = side === 'left' ? state.currentMatchup.left : state.currentMatchup.right;
+            
+            // Remove from rotation
+            state.movies = state.movies.filter(m => m.id !== unseenMovie.id);
+            
+            // Track as unseen (in case we want to show stats later)
+            if (!state.unseenMovies) state.unseenMovies = new Set();
+            state.unseenMovies.add(unseenMovie.id);
+            
+            // Get new matchup
+            selectMatchup();
+        }
+
+        // Haven't seen either movie - remove both and get new matchup
+        function haventSeenEither() {
+            const leftMovie = state.currentMatchup.left;
+            const rightMovie = state.currentMatchup.right;
+            
+            // Remove both from rotation
+            state.movies = state.movies.filter(m => m.id !== leftMovie.id && m.id !== rightMovie.id);
+            
+            // Track as unseen
+            if (!state.unseenMovies) state.unseenMovies = new Set();
+            state.unseenMovies.add(leftMovie.id);
+            state.unseenMovies.add(rightMovie.id);
+            
+            // Get new matchup
+            selectMatchup();
+        }
+
+        // ============================================
+        // SHARE FUNCTIONS
+        // ============================================
+        function getTop10Text() {
+            const sorted = [...state.movies]
+                .filter(m => state.rankedMovies.has(m.id))
+                .sort((a, b) => b.elo - a.elo)
+                .slice(0, 10);
+            
+            if (sorted.length === 0) return null;
+            
+            let text = "🎬 My Top " + sorted.length + " Movies (CinemaRank)\n\n";
+            sorted.forEach((movie, index) => {
+                text += `${index + 1}. ${movie.title} (${movie.year})\n`;
+            });
+            text += "\nBuild your own list: " + window.location.href;
+            
+            return text;
+        }
+
+        function copyShareText() {
+            const text = getTop10Text();
+            if (!text) {
+                showShareFeedback("Rank some movies first!");
+                return;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showShareFeedback("✓ Copied to clipboard!");
+            }).catch(() => {
+                showShareFeedback("Couldn't copy. Try again.");
+            });
+        }
+
+        function shareToTwitter() {
+            const sorted = [...state.movies]
+                .filter(m => state.rankedMovies.has(m.id))
+                .sort((a, b) => b.elo - a.elo)
+                .slice(0, 5);
+            
+            if (sorted.length === 0) {
+                showShareFeedback("Rank some movies first!");
+                return;
+            }
+            
+            let text = "🎬 My Top " + sorted.length + " Movies:\n\n";
+            sorted.forEach((movie, index) => {
+                text += `${index + 1}. ${movie.title}\n`;
+            });
+            text += "\nBuild yours:";
+            
+            const url = window.location.href;
+            const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+            window.open(twitterUrl, '_blank');
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                showShareFeedback("✓ Link copied!");
+            }).catch(() => {
+                showShareFeedback("Couldn't copy. Try again.");
+            });
+        }
+
+        function showShareFeedback(message) {
+            const feedback = document.getElementById('share-feedback');
+            feedback.textContent = message;
+            setTimeout(() => {
+                feedback.textContent = '';
+            }, 3000);
+        }
+
+        // ============================================
+        // TMDB API INTEGRATION (PRODUCTION CODE)
+        // ============================================
+        
+        /*
+        // To use the real TMDB API, replace the sample database with this:
+        
+        const TMDB_API_KEY = 'YOUR_API_KEY_HERE';
+        const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+        
+        async function fetchMoviesFromTMDB(page = 1) {
+            const response = await fetch(
+                `${TMDB_BASE_URL}/discover/movie?` + new URLSearchParams({
+                    api_key: TMDB_API_KEY,
+                    language: 'en-US',
+                    sort_by: 'vote_count.desc',
+                    'vote_count.gte': 1000,
+                    'vote_average.gte': 6,
+                    with_original_language: 'en',
+                    page: page
+                })
+            );
+            
+            const data = await response.json();
+            
+            return data.results.map(movie => ({
+                id: movie.id,
+                title: movie.title,
+                year: new Date(movie.release_date).getFullYear(),
+                rating: movie.vote_average,
+                poster: `https://image.tmdb.org/t/p/w500${movie.poster_path}`,
+                genres: movie.genre_ids,
+                elo: 1500
+            }));
+        }
+        
+        async function loadMovieDatabase() {
+            const allMovies = [];
+            
+            // Fetch multiple pages to get a good sample
+            for (let page = 1; page <= 10; page++) {
+                const movies = await fetchMoviesFromTMDB(page);
+                allMovies.push(...movies);
+            }
+            
+            state.movies = allMovies;
+            selectMatchup();
+        }
+        */
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', () => {
+            // Show preferences screen first, don't start matchups yet
+            // Matchups will start when user clicks "Start Ranking" or "Skip"
+        });
+    </script>
+</body>
+</html>
